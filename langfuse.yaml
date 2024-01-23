@@ -1,5 +1,5 @@
 ---
-namespace: langchain
+namespace: langfuse
 
 database:
   defines: runnable
@@ -9,7 +9,7 @@ database:
   containers:
     postgres:
       paths:
-        - <- `${monk-volume-path}/langchain/postgresql:/var/lib/postgresql/data`
+        - <- `${monk-volume-path}/langfuse/postgresql:/var/lib/postgresql/data`
   services:
     postgres:
       container: postgres
@@ -39,12 +39,12 @@ server:
         - <- `${port}:${port}`
   connections:
     database:
-      runnable: langchain/database
+      runnable: langfuse/database
       service: postgres
   depends:
     wait-for:
       runnables:
-        - langchain/database
+        - langfuse/database
       timeout: 60
   variables:
     langfuse-hostname:
@@ -132,5 +132,5 @@ stack:
     tags: LLM, AI, open source
     publisher: monk.io
   runnable-list:
-    - langchain/database
-    - langchain/server
+    - langfuse/database
+    - langfuse/server
