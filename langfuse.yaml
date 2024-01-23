@@ -1,0 +1,136 @@
+---
+namespace: langchain
+
+database:
+  defines: runnable
+  inherits: postgresql/base
+  metadata:
+    private: true
+  containers:
+    postgres:
+      paths:
+        - <- `${monk-volume-path}/langchain/postgresql:/var/lib/postgresql/data`
+  services:
+    postgres:
+      container: postgres
+      port: 5432
+      protocol: tcp
+  variables:
+    postgres-user:
+        type: string
+        value: postgres
+        env: POSTGRES_USER
+    postgres-password:
+        type: string
+        value: postgres
+        env: POSTGRES_PASSWORD
+    postgres-db:
+        type: string
+        value: db
+        env: POSTGRES_DB
+
+server:
+  defines: runnable
+  containers:
+    langfuse:
+      image: ghcr.io/langfuse/langfuse
+      image-tag: latest
+      ports:
+        - <- `${port}:${port}`
+  connections:
+    database:
+      runnable: langchain/database
+      service: postgres
+  depends:
+    wait-for:
+      runnables:
+        - langchain/database
+      timeout: 60
+  variables:
+    langfuse-hostname:
+        type: string
+        env: LANGFUSE_HOST
+    node-env:
+        type: string
+        value: production
+        env: NODE_ENV
+    database-host:
+        type: string
+        value: <- connection-hostname("database")
+        env: DATABASE_HOST
+    database-port:
+        type: string
+        value: <- connection-port("database")
+        env: DATABASE_PORT
+    database-url:
+        type: string
+        value: <- `postgresql://postgres:postgres@${database-host}:${database-port}/db`
+        env: DATABASE_URL
+    nextauth-secret:
+        type: string
+        value: mysecret
+        env: NEXTAUTH_SECRET
+    salt:
+        type: string
+        value: mysalt
+        env: SALT
+    nextauth-url:
+        type: string
+        value: <- `http://${public-ip}:${port}`
+        env: NEXTAUTH_URL
+    public-ip:
+        type: string
+        value: <- ip-address-public
+    hostname:
+        type: string
+        value: 0.0.0.0
+        env: HOSTNAME
+    langfuse-default-project-role:
+        type: string
+        value: VIEWER
+        env: LANGFUSE_DEFAULT_PROJECT_ROLE
+    port:
+        type: string
+        value: 3000
+        env: PORT
+    telemetry-enabled:
+        type: bool
+        value: true
+        env: TELEMETRY_ENABLED
+    next-public-sign-up-disabled:
+        type: bool
+        value: false
+        env: NEXT_PUBLIC_SIGN_UP_DISABLED
+    langfuse-enable-experimental-features:
+        type: bool
+        value: false
+        env: LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES
+
+  services:
+    langfuse:
+      container: langfuse
+      port: <- `${port}`
+      protocol: tcp
+      host-port: <- `${port}`
+      # publish: true
+
+stack:
+  defines: process-group
+  metadata:
+    name: Langfuse
+    shortname: Langfuse
+    icon: https://langfuse.com/_next/image?url=%2Flogo_dark_512.png&w=256&q=75
+    description: |
+      Langfuse is an open source observability & analytics solution for LLM-based applications. 
+      It is mostly geared towards production usage but some users also use it for local development of their LLM applications.
+      Langfuse is focused on applications built on top of LLMs. 
+      Many new abstractions and common best practices evolved recently, e.g. agents, chained prompts, embedding-based retrieval, LLM access to REPLs & APIs. 
+      These make applications more powerful but also unpredictable for developers as they cannot fully anticipate how changes impact the quality, cost and overall latency of their application. 
+      Thus Langfuse helps to monitor and debug these applications.
+    website: https://langfuse.com/
+    source: https://github.com/langfuse/langfuse
+    tags: LLM, AI, open source
+    publisher: monk.io
+  runnable-list:
+    - langchain/database
+    - langchain/server
